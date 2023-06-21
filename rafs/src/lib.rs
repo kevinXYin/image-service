@@ -48,7 +48,7 @@ use std::sync::Arc;
 
 use crate::metadata::{RafsInodeExt, RafsSuper};
 
-#[cfg(feature = "virtio-fs")]
+//#[cfg(feature = "virtio-fs")]
 pub mod blobfs;
 pub mod fs;
 pub mod metadata;

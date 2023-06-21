@@ -8,6 +8,7 @@ use std::io;
 use std::time::Duration;
 
 use fuse_backend_rs::abi::fuse_abi::{CreateIn, FsOptions, OpenOptions, SetattrValid};
+#[cfg(feature = "virtio-fs")]
 use fuse_backend_rs::abi::virtio_fs;
 use fuse_backend_rs::api::filesystem::{
     Context, DirEntry, Entry, FileSystem, GetxattrReply, ListxattrReply, ZeroCopyReader,
@@ -364,7 +365,7 @@ impl FileSystem for BlobFs {
     ) -> io::Result<()> {
         self.pfs.releasedir(_ctx, inode, _flags, handle)
     }
-
+    #[cfg(feature = "virtio-fs")]
     fn setupmapping(
         &self,
         _ctx: &Context,
@@ -394,7 +395,7 @@ impl FileSystem for BlobFs {
         self.pfs
             .setupmapping(_ctx, inode, _handle, foffset, len, flags, moffset, vu_req)
     }
-
+    #[cfg(feature = "virtio-fs")]
     fn removemapping(
         &self,
         _ctx: &Context,

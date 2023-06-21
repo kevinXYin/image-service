@@ -633,6 +633,9 @@ pub fn create_vfs_backend(
             // rafs can be readonly and skip open
             opts.no_open = true;
         }
+        FsBackendType::Blobfs => {
+            opts.no_open = true;
+        }
     };
 
     if !is_fuse && hybrid_mode {

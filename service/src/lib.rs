@@ -158,6 +158,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 pub enum FsBackendType {
     /// Registry Accelerated File System
     Rafs,
+    /// Export passthrough blob fs
+    Blobfs,
     /// Share an underlying directory as a FUSE filesystem.
     PassthroughFs,
 }
@@ -168,6 +170,7 @@ impl FromStr for FsBackendType {
     fn from_str(s: &str) -> Result<FsBackendType> {
         match s {
             "rafs" => Ok(FsBackendType::Rafs),
+            "blobfs" => Ok(FsBackendType::Blobfs),
             "passthrough" => Ok(FsBackendType::PassthroughFs),
             "passthroughfs" => Ok(FsBackendType::PassthroughFs),
             "passthrough_fs" => Ok(FsBackendType::PassthroughFs),

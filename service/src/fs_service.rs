@@ -19,6 +19,7 @@ use fuse_backend_rs::passthrough::{Config, PassthroughFs};
 use nydus_api::ConfigV2;
 use nydus_rafs::fs::Rafs;
 use nydus_rafs::{RafsError, RafsIoRead};
+use nydus_rafs::blobfs::{BlobFs, Config as BlobfsConfig};
 use nydus_storage::factory::BLOB_FACTORY;
 use serde::{Deserialize, Serialize};
 
@@ -28,7 +29,7 @@ use crate::{Error, FsBackendDescriptor, FsBackendType, Result};
 /// Request structure to mount a filesystem instance.
 #[derive(Clone)]
 pub struct FsBackendMountCmd {
-    /// Filesystem type.
+    /// Filesystem type. 
     pub fs_type: FsBackendType,
     /// Mount source.
     pub source: String,
@@ -60,6 +61,9 @@ impl FsBackendCollection {
                     .map_err(|e| Error::InvalidConfig(format!("{}", e)))?;
                 let cfg = cfg.clone_without_secrets();
                 Some(cfg)
+            }
+            FsBackendType::Blobfs => {
+                None
             }
             FsBackendType::PassthroughFs => {
                 // Passthrough Fs has no configuration information.
@@ -247,6 +251,40 @@ fn fs_backend_factory(cmd: &FsBackendMountCmd) -> Result<BackFileSystem> {
             rafs.import(reader, prefetch_files)?;
             info!("RAFS filesystem imported");
             Ok(Box::new(rafs))
+        }
+        FsBackendType::Blobfs => {
+            let config = ConfigV2::from_str(cmd.config.as_str()).map_err(RafsError::LoadConfig)?;
+            let work_dir = config
+                    .cache
+                    .ok_or(Error::NotFound)?
+                    .file_cache
+                    .ok_or(Error::NotFound)?
+                    .work_dir;
+
+            let blob_ondemand_cfg = format!(
+                r#"
+                {{
+                    "rafs_conf": {},
+                    "bootstrap_path": "{}",
+                    "blob_cache_dir": "{}"
+                }}"#,
+                cmd.config.as_str(), cmd.source.as_str(), &work_dir
+            );
+            let fs_cfg = BlobfsConfig {
+                ps_config: Config {
+                    root_dir: work_dir,
+                    do_import: false,
+                    writeback: true,
+                    no_open: true,
+                    xattr: true,
+                    ..Default::default()
+                },
+                blob_ondemand_cfg,
+            };
+            let blob_fs = BlobFs::new(fs_cfg).map_err(RafsError::LoadConfig)?;
+            blob_fs.import().map_err(RafsError::LoadConfig)?;
+            info!("Blob filesystem imported");
+            Ok(Box::new(blob_fs))
         }
         FsBackendType::PassthroughFs => {
             #[cfg(target_os = "macos")]

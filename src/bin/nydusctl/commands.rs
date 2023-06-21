@@ -421,6 +421,7 @@ Commit:                 {git_commit}
                             println!("\tMounted Time:  {}", backend.mounted_time);
                             match backend.backend_type {
                                 FsBackendType::PassthroughFs => {}
+                                FsBackendType::Blobfs => {}
                                 FsBackendType::Rafs => {
                                     let cfg = backend.config.unwrap();
                                     let cache_cfg = cfg.get_cache_config()?;
