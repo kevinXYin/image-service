@@ -255,6 +255,7 @@ fn fs_backend_factory(cmd: &FsBackendMountCmd) -> Result<BackFileSystem> {
         FsBackendType::Blobfs => {
             let config = ConfigV2::from_str(cmd.config.as_str()).map_err(RafsError::LoadConfig)?;
             let work_dir = config
+                    .clone()
                     .cache
                     .ok_or(Error::NotFound)?
                     .file_cache
@@ -268,7 +269,7 @@ fn fs_backend_factory(cmd: &FsBackendMountCmd) -> Result<BackFileSystem> {
                     "bootstrap_path": "{}",
                     "blob_cache_dir": "{}"
                 }}"#,
-                cmd.config.as_str(), cmd.source.as_str(), &work_dir
+                serde_json::to_string(&config).unwrap(), cmd.source.as_str(), &work_dir
             );
             let fs_cfg = BlobfsConfig {
                 ps_config: Config {

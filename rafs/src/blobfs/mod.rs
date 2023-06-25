@@ -244,10 +244,11 @@ impl BlobFs {
                     .to_os_string()
                     .into_string()
                     .map_err(|_e| einval!("blobfs: failed to get blob id from file name"))?;
-                trace!("load_chunks_on_demand: blob_id {}", blob_id);
-                entry.insert((st.st_size as u64, blob_id.clone()));
+                let blob_idv: Vec<&str> = blob_id.split(".").collect();
+                trace!("load_chunks_on_demand: blob_id {}", blob_idv[0]);
+                entry.insert((st.st_size as u64, blob_idv[0].to_string()));
 
-                Ok((blob_id, st.st_size as u64))
+                Ok((blob_idv[0].to_string(), st.st_size as u64))
             }
         }
     }
