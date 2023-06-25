@@ -563,6 +563,7 @@ pub fn create_fuse_daemon(
     fp: FailoverPolicy,
     mount_cmd: Option<FsBackendMountCmd>,
     bti: BuildTimeInfo,
+    blobfs_mount_cmd:  Option<FsBackendMountCmd>,
 ) -> Result<Arc<dyn NydusDaemon>> {
     let mnt = Path::new(mountpoint).canonicalize()?;
     let (trigger, events_rx) = channel::<DaemonStateMachineInput>();
@@ -593,6 +594,11 @@ pub fn create_fuse_daemon(
         if let Some(cmd) = mount_cmd {
             daemon.service.mount(cmd)?;
         }
+
+        if let Some(cmd) = blobfs_mount_cmd {
+            daemon.service.mount(cmd)?;
+        }
+
         daemon
             .service
             .session

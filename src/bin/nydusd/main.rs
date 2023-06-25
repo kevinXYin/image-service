@@ -86,7 +86,15 @@ fn append_fs_options(app: Command) -> Command {
             .short('m')
             .help("Mountpoint within the FUSE/virtiofs device to mount the RAFS/passthroughfs filesystem")
             .default_value("/")
-            .required(false),
+            .required(false)
+            .requires("blobfs-mountpoint"),
+    )
+    .arg(
+        Arg::new("blobfs-mountpoint")
+            .long("blobfs-mountpoint")
+            .help("Mountpoint within the FUSE/virtiofs device to mount the Blobfs filesystem")
+            .required(false)
+
     )
 }
 
@@ -375,9 +383,10 @@ fn process_fs_service(
     let bootstrap = args.value_of("bootstrap");
     // safe as virtual_mountpoint default to "/"
     let virtual_mnt = args.value_of("virtual-mountpoint").unwrap();
+    let blobfs_mnt = args.value_of("blobfs-mountpoint");
 
     let mut fs_type = FsBackendType::PassthroughFs;
-    let mount_cmd = if let Some(shared_dir) = shared_dir {
+    let (mount_cmd,blobfs_mount_cmd) = if let Some(shared_dir) = shared_dir {
         let cmd = FsBackendMountCmd {
             fs_type: FsBackendType::PassthroughFs,
             source: shared_dir.to_string(),
@@ -386,7 +395,7 @@ fn process_fs_service(
             prefetch_files: None,
         };
 
-        Some(cmd)
+        (Some(cmd), None)
     } else if let Some(b) = bootstrap {
         let config = match args.value_of("localfs-dir") {
             Some(v) => {
@@ -455,16 +464,28 @@ fn process_fs_service(
         let cmd = FsBackendMountCmd {
             fs_type: FsBackendType::Rafs,
             source: b.to_string(),
-            config,
+            config: config.clone(),
             mountpoint: virtual_mnt.to_string(),
-            prefetch_files,
+            prefetch_files: prefetch_files.clone(),
+        };
+
+        let blobfs_cmd = if let Some(blobfs_mnt) = blobfs_mnt {
+            Some(FsBackendMountCmd {
+                fs_type: FsBackendType::Blobfs,
+                source: b.to_string(),
+                config,
+                mountpoint: blobfs_mnt.to_string(),
+                prefetch_files,
+            })
+        } else {
+            None
         };
 
         fs_type = FsBackendType::Rafs;
 
-        Some(cmd)
+        (Some(cmd),blobfs_cmd)
     } else {
-        None
+        (None,None)
     };
 
     let vfs = create_vfs_backend(fs_type, is_fuse, args.is_present("hybrid-mode"))?;
@@ -507,6 +528,7 @@ fn process_fs_service(
                 p,
                 mount_cmd,
                 bti,
+                blobfs_mount_cmd,
             )
             .map(|d| {
                 info!("Fuse daemon started!");
